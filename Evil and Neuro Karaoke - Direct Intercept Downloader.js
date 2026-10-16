@@ -1,8 +1,10 @@
 // ==UserScript==
 // @name         Evil and Neuro Karaoke - Direct Intercept Downloader
-// @namespace    http://tampermonkey.net/
-// @version      2.2
 // @description  Intercepts individual track downloads, keeps action buttons visible, and auto-clicks Sign In on evilkaraoke.com
+// @namespace    http://tampermonkey.net/
+// @version      2026-10-15
+// @downloadURL  https://raw.githubusercontent.com/PixelSpark987/Evil-and-Neuro-Karaoke-Direct-Intercept-Downloader/refs/heads/main/Evil%20and%20Neuro%20Karaoke%20-%20Direct%20Intercept%20Downloader.js
+// @uploadURL    https://raw.githubusercontent.com/PixelSpark987/Evil-and-Neuro-Karaoke-Direct-Intercept-Downloader/refs/heads/main/Evil%20and%20Neuro%20Karaoke%20-%20Direct%20Intercept%20Downloader.js
 // @match        *://evilkaraoke.com/*
 // @match        *://*.evilkaraoke.com/*
 // @match        *://neurokaraoke.com/*
