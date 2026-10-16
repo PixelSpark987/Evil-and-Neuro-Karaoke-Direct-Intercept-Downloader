@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Evil and Neuro Karaoke - Direct Intercept Downloader
 // @description  Intercepts and renames individual track downloads on evilkaraoke.com
-// @version      2026-10-15_05
+// @version      2026-10-16
 // @namespace    http://tampermonkey.net/
 // @downloadURL  https://raw.githubusercontent.com/PixelSpark987/Evil-and-Neuro-Karaoke-Direct-Intercept-Downloader/refs/heads/main/Evil%20and%20Neuro%20Karaoke%20-%20Direct%20Intercept%20Downloader.js
 // @updateURL    https://raw.githubusercontent.com/PixelSpark987/Evil-and-Neuro-Karaoke-Direct-Intercept-Downloader/refs/heads/main/Evil%20and%20Neuro%20Karaoke%20-%20Direct%20Intercept%20Downloader.js
@@ -33,6 +33,40 @@
     ];
 
     let lastActiveTrackItem = null;
+    let pendingFilename = null;
+
+    /**
+     * Hook document.createElement to catch dynamically generated download links
+     * and inject our custom filename across all browsers (including mobile).
+     */
+    const originalCreateElement = document.createElement;
+    document.createElement = function(tagName) {
+        const el = originalCreateElement.call(document, tagName);
+        if (tagName.toLowerCase() === 'a') {
+            const originalSetAttribute = el.setAttribute;
+            el.setAttribute = function(name, value) {
+                if (name === 'download' && pendingFilename) {
+                    value = pendingFilename + ".mp3";
+                    pendingFilename = null;
+                }
+                return originalSetAttribute.call(this, name, value);
+            };
+            
+            Object.defineProperty(el, 'download', {
+                set(val) {
+                    if (pendingFilename) {
+                        val = pendingFilename + ".mp3";
+                        pendingFilename = null;
+                    }
+                    el.setAttribute('download', val);
+                },
+                get() {
+                    return el.getAttribute('download');
+                }
+            });
+        }
+        return el;
+    };
 
     /**
      * Inject custom CSS to make track action buttons permanently visible.
@@ -121,10 +155,9 @@
     }
 
     /**
-     * Intercepts download clicks from both direct buttons and detached context menus.
+     * Prepares custom filename queue and triggers visual feedback when download buttons/menu items are clicked.
      */
-    document.addEventListener('click', async function(event) {
-        // Track the parent song item whenever the "More options" button is clicked
+    document.addEventListener('click', function(event) {
         const moreBtn = event.target.closest('button.more-btn');
         if (moreBtn) {
             lastActiveTrackItem = moreBtn.closest('.cover-list-item');
@@ -150,48 +183,20 @@
 
         if (!isDownloadAction) return;
 
-        // Resolve track item via direct DOM hierarchy or fallback to the last opened context menu target
         const trackItem = targetElement.closest('.cover-list-item') || lastActiveTrackItem;
         if (!trackItem) return;
 
-        // Prevent default site popup/download trigger
-        event.preventDefault();
-        event.stopPropagation();
+        // Queue up the custom filename so our document.createElement hook catches it
+        pendingFilename = generateFilename(trackItem);
 
-        const customFilename = generateFilename(trackItem);
+        // Provide visual feedback: dim the clicked download button/item for 500ms
+        const originalOpacity = targetElement.style.opacity;
+        targetElement.style.transition = 'opacity 0.1s ease';
+        targetElement.style.opacity = '0.3';
+        setTimeout(() => {
+            targetElement.style.opacity = originalOpacity;
+        }, 500);
 
-        // Give visual feedback on the track item
-        trackItem.style.opacity = '0.7';
-
-        try {
-            // Locate target media link or trigger network fetch
-            const audioEl = trackItem.querySelector('audio') || document.querySelector('audio');
-            let mediaUrl = audioEl ? audioEl.src : null;
-
-            if (!mediaUrl) {
-                const tempLink = document.createElement('a');
-                tempLink.download = customFilename + ".mp3";
-                tempLink.click();
-                return;
-            }
-
-            const response = await fetch(mediaUrl);
-            const blob = await response.blob();
-            const blobUrl = URL.createObjectURL(blob);
-
-            const tempLink = document.createElement('a');
-            tempLink.href = blobUrl;
-            tempLink.download = customFilename + ".mp3";
-            document.body.appendChild(tempLink);
-            tempLink.click();
-            document.body.removeChild(tempLink);
-
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-        } catch (err) {
-            console.error("Custom download failed, falling back to default:", err);
-        } finally {
-            trackItem.style.opacity = '1';
-        }
     }, true);
 
     // Initialise style injection and sign-in automation on load
