@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Evil and Neuro Karaoke - Direct Intercept Downloader
 // @description  Intercepts and renames individual track downloads on evilkaraoke.com
-// @version      2026-10-16
+// @version      2026-10-16-01
 // @namespace    http://tampermonkey.net/
 // @downloadURL  https://raw.githubusercontent.com/PixelSpark987/Evil-and-Neuro-Karaoke-Direct-Intercept-Downloader/refs/heads/main/Evil%20and%20Neuro%20Karaoke%20-%20Direct%20Intercept%20Downloader.js
 // @updateURL    https://raw.githubusercontent.com/PixelSpark987/Evil-and-Neuro-Karaoke-Direct-Intercept-Downloader/refs/heads/main/Evil%20and%20Neuro%20Karaoke%20-%20Direct%20Intercept%20Downloader.js
@@ -30,6 +30,14 @@
         { field: "CoverBy", match: "Neuro", replacement: "Neuro-sama" },
         { field: "CoverBy", match: "Evil & Neuro", replacement: "Evil Neuro and Neuro-sama" },
         { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
+        { field: "CoverBy", match: "Neuro v1", replacement: "Neuro-sama - Version 1" },
+        { field: "CoverBy", match: "Neuro v2", replacement: "Neuro-sama - Version 2" },
+      // { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
+      // { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
+     //  { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
+     //  { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
+      // { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
+     //  { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
     ];
 
     let lastActiveTrackItem = null;
