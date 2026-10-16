@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Evil and Neuro Karaoke - Direct Intercept Downloader
+// @name         ENK - Direct Intercept Downloader
 // @description  Intercepts and renames individual track downloads on evilkaraoke.com
-// @version      2026-10-16-01
+// @version      2026-10-16_05
 // @namespace    http://tampermonkey.net/
 // @downloadURL  https://raw.githubusercontent.com/PixelSpark987/Evil-and-Neuro-Karaoke-Direct-Intercept-Downloader/refs/heads/main/Evil%20and%20Neuro%20Karaoke%20-%20Direct%20Intercept%20Downloader.js
 // @updateURL    https://raw.githubusercontent.com/PixelSpark987/Evil-and-Neuro-Karaoke-Direct-Intercept-Downloader/refs/heads/main/Evil%20and%20Neuro%20Karaoke%20-%20Direct%20Intercept%20Downloader.js
@@ -32,12 +32,22 @@
         { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
         { field: "CoverBy", match: "Neuro v1", replacement: "Neuro-sama - Version 1" },
         { field: "CoverBy", match: "Neuro v2", replacement: "Neuro-sama - Version 2" },
-      // { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
-      // { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
-     //  { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
-     //  { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
-      // { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
-     //  { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
+        { field: "CoverBy", match: "Neuro & Vedal", replacement: "Neuro-sama and Vedal987" },
+        { field: "CoverBy", match: "Vedal & Neuro", replacement: "Vedal987 and Neuro-sama" },
+        { field: "CoverBy", match: "Evil & Vedal", replacement: "Evil Neuro and Vedal987" },
+        { field: "CoverBy", match: "Vedal & Evil", replacement: "Vedal987 and Evil Neuro" },
+        { field: "CoverBy", match: "Neuro & MinikoMew", replacement: "Neuro-sama and Miniko Mew" },
+        { field: "CoverBy", match: "MinikoMew & Neuro", replacement: "Miniko Mew and Neuro-sama" },
+        { field: "CoverBy", match: "Evil & MinikoMew", replacement: "Evil Neuro and Miniko Mew" },
+        { field: "CoverBy", match: "MinikoMew & Evil", replacement: "Miniko Mew and Evil Neuro" },
+        { field: "CoverBy", match: "Neuro & Cerber", replacement: "Neuro-sama and CerberVT" },
+        { field: "CoverBy", match: "Cerber & Neuro", replacement: "CerberVT and Neuro-sama" },
+        { field: "CoverBy", match: "Evil & Miyune", replacement: "Evil Neuro and Miyune" },
+        { field: "CoverBy", match: "Miyune & Evil", replacement: "Miyune and Evil Neuro" },
+        { field: "CoverBy", match: "Neuro & Miyune", replacement: "Neuro-sama and Miyune" },
+        { field: "CoverBy", match: "Miyune & Neuro", replacement: "Miyune and Neuro-sama" },
+        { field: "CoverBy", match: "Neuro & Annytf", replacement: "Neuro-sama and AnnyTF" },
+        { field: "CoverBy", match: "Annytf & Neuro", replacement: "AnnyTF and Neuro-sama" },
     ];
 
     let lastActiveTrackItem = null;
@@ -59,7 +69,7 @@
                 }
                 return originalSetAttribute.call(this, name, value);
             };
-            
+
             Object.defineProperty(el, 'download', {
                 set(val) {
                     if (pendingFilename) {
@@ -124,17 +134,37 @@
     }
 
     /**
+     * Checks if a button is a download button across list and detail views.
+     */
+    function isDownloadButton(btn) {
+        if (!btn || btn.tagName !== 'BUTTON') return false;
+        if (btn.classList.contains('download-btn')) return true;
+        if (btn.getAttribute('title') === 'Download') return true;
+        if (btn.querySelector('path[d*="M5,20h14v-2H5V20z"]')) return true;
+        return false;
+    }
+
+    /**
      * Parses the track metadata from the DOM element, applies rules, and generates the final filename.
      */
     function generateFilename(trackItem) {
-        const fullTitle = trackItem.querySelector('.track-title')?.textContent.trim() || "";
+        const fullTitle = trackItem.querySelector('.track-title, .song-title')?.textContent.trim() || "";
         let artist = trackItem.querySelector('.track-artist')?.textContent.trim() || "";
-        const rawDate = trackItem.querySelector('.track-stream-date')?.getAttribute('title') ||
+        
+        let rawDate = trackItem.querySelector('.track-stream-date')?.getAttribute('title') ||
                         trackItem.querySelector('.track-stream-date')?.textContent.trim() || "";
+
+        if (!rawDate) {
+            const textNodes = trackItem.textContent || "";
+            const dateMatch = textNodes.match(/(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4}/i);
+            if (dateMatch) {
+                rawDate = dateMatch[0];
+            }
+        }
 
         const date = formatDate(rawDate);
 
-        // Extract song title and cover artist from patterns like "Last Dinosaurs - Zoom (Evil)"
+        // Extract song title and cover artist from patterns like "Madonna - Material Girl (Neuro)"
         let title = fullTitle;
         let coverBy = artist;
 
@@ -168,19 +198,19 @@
     document.addEventListener('click', function(event) {
         const moreBtn = event.target.closest('button.more-btn');
         if (moreBtn) {
-            lastActiveTrackItem = moreBtn.closest('.cover-list-item');
+            lastActiveTrackItem = moreBtn.closest('.cover-list-item, .song-info');
             return;
         }
 
-        const downloadBtn = event.target.closest('button.download-btn');
+        const clickedBtn = event.target.closest('button');
         const menuDownloadItem = event.target.closest('.mud-menu-item');
 
         let isDownloadAction = false;
         let targetElement = null;
 
-        if (downloadBtn) {
+        if (clickedBtn && isDownloadButton(clickedBtn)) {
             isDownloadAction = true;
-            targetElement = downloadBtn;
+            targetElement = clickedBtn;
         } else if (menuDownloadItem) {
             const text = menuDownloadItem.textContent || "";
             if (text.includes("Download")) {
@@ -191,7 +221,7 @@
 
         if (!isDownloadAction) return;
 
-        const trackItem = targetElement.closest('.cover-list-item') || lastActiveTrackItem;
+        const trackItem = targetElement.closest('.cover-list-item, .song-info') || lastActiveTrackItem;
         if (!trackItem) return;
 
         // Queue up the custom filename so our document.createElement hook catches it
