@@ -1,10 +1,8 @@
 // ==UserScript==
 // @name         Evil and Neuro Karaoke - Direct Intercept Downloader
-// @description  Intercepts individual track downloads, keeps action buttons visible, and auto-clicks Sign In on evilkaraoke.com
 // @namespace    http://tampermonkey.net/
-// @version      2026-10-15_02
-// @downloadURL  https://raw.githubusercontent.com/PixelSpark987/Evil-and-Neuro-Karaoke-Direct-Intercept-Downloader/refs/heads/main/Evil%20and%20Neuro%20Karaoke%20-%20Direct%20Intercept%20Downloader.js
-// @updateURL    https://raw.githubusercontent.com/PixelSpark987/Evil-and-Neuro-Karaoke-Direct-Intercept-Downloader/refs/heads/main/Evil%20and%20Neuro%20Karaoke%20-%20Direct%20Intercept%20Downloader.js
+// @version      2026-10-15_04
+// @description  Intercepts and renames individual track downloads on evilkaraoke.com
 // @match        *://evilkaraoke.com/*
 // @match        *://*.evilkaraoke.com/*
 // @match        *://neurokaraoke.com/*
@@ -31,6 +29,8 @@
         { field: "CoverBy", match: "Evil & Neuro", replacement: "Evil Neuro and Neuro-sama" },
         { field: "CoverBy", match: "Neuro & Evil", replacement: "Neuro-sama and Evil Neuro" },
     ];
+
+    let lastActiveTrackItem = null;
 
     /**
      * Inject custom CSS to make track action buttons permanently visible.
@@ -119,13 +119,37 @@
     }
 
     /**
-     * Intercepts download button clicks on track list items.
+     * Intercepts download clicks from both direct buttons and detached context menus.
      */
     document.addEventListener('click', async function(event) {
-        const downloadBtn = event.target.closest('button.download-btn');
-        if (!downloadBtn) return;
+        // Track the parent song item whenever the "More options" button is clicked
+        const moreBtn = event.target.closest('button.more-btn');
+        if (moreBtn) {
+            lastActiveTrackItem = moreBtn.closest('.cover-list-item');
+            return;
+        }
 
-        const trackItem = downloadBtn.closest('.cover-list-item');
+        const downloadBtn = event.target.closest('button.download-btn');
+        const menuDownloadItem = event.target.closest('.mud-menu-item');
+
+        let isDownloadAction = false;
+        let targetElement = null;
+
+        if (downloadBtn) {
+            isDownloadAction = true;
+            targetElement = downloadBtn;
+        } else if (menuDownloadItem) {
+            const text = menuDownloadItem.textContent || "";
+            if (text.includes("Download")) {
+                isDownloadAction = true;
+                targetElement = menuDownloadItem;
+            }
+        }
+
+        if (!isDownloadAction) return;
+
+        // Resolve track item via direct DOM hierarchy or fallback to the last opened context menu target
+        const trackItem = targetElement.closest('.cover-list-item') || lastActiveTrackItem;
         if (!trackItem) return;
 
         // Prevent default site popup/download trigger
@@ -134,8 +158,8 @@
 
         const customFilename = generateFilename(trackItem);
 
-        // Disable button briefly to give visual feedback
-        downloadBtn.style.opacity = '0.5';
+        // Give visual feedback on the track item
+        trackItem.style.opacity = '0.7';
 
         try {
             // Locate target media link or trigger network fetch
@@ -143,9 +167,9 @@
             let mediaUrl = audioEl ? audioEl.src : null;
 
             if (!mediaUrl) {
-                // If audio URL is not exposed directly in DOM, allow fallback click while setting attribute
-                downloadBtn.setAttribute('download', customFilename + ".mp3");
-                downloadBtn.click();
+                const tempLink = document.createElement('a');
+                tempLink.download = customFilename + ".mp3";
+                tempLink.click();
                 return;
             }
 
@@ -164,7 +188,7 @@
         } catch (err) {
             console.error("Custom download failed, falling back to default:", err);
         } finally {
-            downloadBtn.style.opacity = '1';
+            trackItem.style.opacity = '1';
         }
     }, true);
 
